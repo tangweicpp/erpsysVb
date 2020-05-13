@@ -1,0 +1,333 @@
+Private Function GetWOData(ByRef dT As tyWO, _
+                           xlSheet As Excel.Worksheet, _
+                           i As Integer) As Boolean
+'Private Sub GetWOData(ByRef dT As tyWO, xlSheet As Excel.Worksheet, i As Integer)
+Dim strSql      As String
+Dim strSqlfab   As String
+Dim rs          As New ADODB.Recordset
+Dim rsfab       As New ADODB.Recordset
+Dim lRevID      As Long
+Dim lID         As Long
+
+Dim strdevice_prcie       As String
+Dim rsdevice    As New ADODB.Recordset
+Dim rsdevice1   As New ADODB.Recordset
+Dim rsdevice_prcie    As New ADODB.Recordset
+Dim w_price As String
+Dim d_price As String
+
+
+Dim strprdevice As String
+Dim strdevice   As String
+Dim price_w     As String
+Dim price_d     As String
+Dim price_unit  As String
+Dim pocheck     As String
+Dim pocheck1    As String
+Dim cust_name   As String
+Dim PO_ID       As String
+Dim postr       As String
+Dim postr1      As String
+
+
+
+
+
+
+
+GetWOData = True
+dT.TAX_TYPE = IIf(cbTaxType.ListIndex = 0, "A", "B")
+dT.CUSTOMER_CODE = UCase(Trim(cbCusCode.text))
+dT.ITEM = Trim("" & Replace(Replace(xlSheet.Range("A" & i), Chr(10), ""), Chr(13), ""))
+dT.po_no = Trim("" & Replace(Replace(xlSheet.Range("B" & i), Chr(10), ""), Chr(13), ""))
+dT.SUPPLIER = Trim("" & Replace(Replace(xlSheet.Range("C" & i), Chr(10), ""), Chr(13), ""))
+dT.SHIP_TO = Trim("" & Replace(Replace(xlSheet.Range("D" & i), Chr(10), ""), Chr(13), ""))
+dT.Fab_Device = Trim("" & Replace(Replace(xlSheet.Range("E" & i), Chr(10), ""), Chr(13), ""))
+dT.Customer_Device = Trim("" & Replace(Replace(xlSheet.Range("F" & i), Chr(10), ""), Chr(13), ""))
+dT.WAFER_VERSION = Trim("" & Replace(Replace(Replace(xlSheet.Range("G" & i), Chr(10), ""), Chr(13), ""), "'", ""))
+dT.MARKING_CODE = Trim("" & Replace(Replace(xlSheet.Range("H" & i), Chr(10), ""), Chr(13), ""))
+dT.WO_DATE = Trim("" & Replace(Replace(xlSheet.Range("I" & i), Chr(10), ""), Chr(13), ""))
+dT.Lot_id = Trim("" & Replace(Replace(Replace(xlSheet.Range("J" & i), Chr(10), ""), Chr(13), ""), "+", ""))
+dT.wafer_id = Trim("" & Replace(Replace(xlSheet.Range("K" & i), Chr(10), ""), Chr(13), ""))
+dT.GOOD_DIES_PCS = CLng(Replace(Replace(xlSheet.Range("L" & i), Chr(10), ""), Chr(13), ""))
+dT.GROSS_DIES_PCS = CLng(Replace(Replace(xlSheet.Range("M" & i), Chr(10), ""), Chr(13), ""))
+dT.HT_DEVICE = Trim("" & Replace(Replace(xlSheet.Range("N" & i), Chr(10), ""), Chr(13), ""))
+dT.REMARK = Trim("" & Replace(Replace(xlSheet.Range("O" & i), Chr(10), ""), Chr(13), ""))
+dT.TRADE_TYPE = Trim("" & Replace(Replace(xlSheet.Range("P" & i), Chr(10), ""), Chr(13), ""))
+dT.DATA1 = Trim("" & Replace(Replace(xlSheet.Range("Q" & i), Chr(10), ""), Chr(13), ""))
+dT.DATA2 = Trim("" & Replace(Replace(xlSheet.Range("R" & i), Chr(10), ""), Chr(13), ""))
+dT.DATA3 = Trim("" & Replace(Replace(xlSheet.Range("S" & i), Chr(10), ""), Chr(13), ""))
+dT.DATA4 = Trim("" & Replace(Replace(xlSheet.Range("T" & i), Chr(10), ""), Chr(13), ""))
+dT.DATA5 = Trim("" & Replace(Replace(xlSheet.Range("U" & i), Chr(10), ""), Chr(13), ""))
+price_w = Trim("" & Replace(Replace(xlSheet.Range("V" & i), Chr(10), ""), Chr(13), ""))
+price_d = Trim("" & Replace(Replace(xlSheet.Range("W" & i), Chr(10), ""), Chr(13), ""))
+'price_unit = Trim("" & Replace(Replace(xlSheet.Range("X" & I), Chr(10), ""), Chr(13), ""))
+If Len(dT.wafer_id) = 1 Then
+    dT.lot_wafer_id = dT.Lot_id & "0" & dT.wafer_id
+ElseIf Len(dT.wafer_id) = 2 Then
+    dT.lot_wafer_id = dT.Lot_id & dT.wafer_id
+    If Left$(dT.wafer_id, 1) = "0" Then
+        dT.wafer_id = Right$(dT.wafer_id, 1)
+
+    End If
+
+Else
+    dT.lot_wafer_id = dT.Lot_id & dT.wafer_id
+
+End If
+
+'WO数据版本化存储
+lRevID = Get_OracleNo("select nvl(max(REV_ID)+1,1) from TBL_WO_TEMPLATE_DATA_REP where J_LOT_ID = '" & dT.Lot_id & "' and K_WAFER_ID = '" & dT.wafer_id & "' ")
+lID = Get_OracleNo("select nvl(max(id)+1,1) from TBL_WO_TEMPLATE_DATA_REP ")
+strSql = "insert into TBL_WO_TEMPLATE_DATA_REP(A_ITEM,B_PO_NO,C_SUPPLIER,D_SHIP_TO,E_FAB_DEVICE,F_CUSTOMER_DEVICE,G_WAFER_VERSION,H_MARKING_LOT_ID,I_DATE,J_LOT_ID,K_WAFER_ID " & " ,L_GOOD_DIES,M_TOTAL_DIES,N_HT_PN,O_REMARK,P_REMARK,Q_REMARK,R_REMARK,S_REMARK,T_REMARK,U_REMARK,REV_ID,CREATE_BY,CREATE_DATE,TAX_TYPE,ID) " & " values('" & dT.ITEM & "','" & dT.po_no & "','" & dT.SUPPLIER & "','" & dT.SHIP_TO & "','" & dT.Fab_Device & "','" & dT.Customer_Device & "','" & dT.WAFER_VERSION & "','" & dT.MARKING_CODE & "','" & dT.WO_DATE & "','" & dT.Lot_id & "', " & " '" & dT.wafer_id & "'," & dT.GOOD_DIES_PCS & "," & dT.GROSS_DIES_PCS & ",'" & dT.HT_DEVICE & "','" & dT.REMARK & "','" & dT.TRADE_TYPE & "','" & dT.DATA1 & "','" & dT.DATA2 & "','" & dT.DATA3 & "','" & dT.DATA4 & "','" & dT.DATA5 & "'," & lRevID & ",'" & gUserName & "' || '" & gUserRealName & "',sysdate,'" & dT.TAX_TYPE & "'," & lID & ")     "
+AddSql (strSql)
+strSql = "SELECT * FROM erptemp..CONFIG a WHERE a.CUSTOMER = '" & UCase(Trim(cbCusCode.text)) & "'  AND a.REMARK1 = 'Y'"
+If rs.State = adStateOpen Then rs.Close
+rs.Open strSql, INIadoCon2, adOpenStatic, adLockReadOnly, adCmdText
+If Not rs.EOF Then  '表示有数据了
+    strSqlfab = " select p.customershortname,p.customerptno1,p.customerptno2,count(p.qtechptno2 )  from tbltsvnpiproduct p where p.customershortname =  '" & UCase(Trim(cbCusCode.text)) & "'      " & " and p.customerptno1 = '" & dT.Customer_Device & "'   and  p.customerptno2 = '" & dT.Fab_Device & "'   group by p.customershortname,p.customerptno1,p.customerptno2 "
+    If rsfab.State = adStateOpen Then rsfab.Close
+    rsfab.Open strSqlfab, Cnn, adOpenStatic, adLockReadOnly, adCmdText
+    If Not rsfab.EOF Then
+        If rsfab.Fields(3).Value <> "1" Then
+            MsgBox "客户机种+FAB_DEVICE 不存在唯一成品料号"
+            GetWOData = False
+            Exit Function
+
+        End If
+
+    Else
+        MsgBox "客户机种+FAB_DEVICE 不存在唯一成品料号"
+        GetWOData = False
+        Exit Function
+
+    End If
+
+End If
+
+
+If cbCusCode.text <> "37" Then
+
+If Trim(dT.po_no) = "" Then
+    MsgBox "WO上无PO_NUM,不允许上传WO,请确认WO信息!"
+    GetWOData = False
+    Exit Function
+
+End If
+
+ strdevice_prcie = "SELECT a.wafer_price,a.die_price FROM erptemp..HT_PRICE_CONTROL A  WHERE a.cust_device  = '" & dT.Customer_Device & "' AND a.cust_id = '" & UCase(Trim(cbCusCode.text)) & "' AND FLAG = 0 "
+
+
+If rsdevice_prcie.State = adStateOpen Then rsdevice_prcie.Close
+rsdevice_prcie.Open strdevice_prcie, INIadoCon2, adOpenStatic, adLockReadOnly, adCmdText
+
+If Not rsdevice_prcie.EOF Then
+ 
+ w_price = Trim(rsdevice_prcie.Fields(0).Value)
+ d_price = Trim(rsdevice_prcie.Fields(1).Value)
+ 
+
+
+cust_name = Get_SqlStr("SELECT a.客户名称 FROM erpdata..tblXCustomer a WHERE a.客户代码 = '" & cbCusCode.text & "'")
+
+
+strdevice = "  SELECT a.wafer_price,a.die_price,a.currency  FROM erptemp..ht_price_control a ,erptemp..ht_price_config b   WHERE a.cust_id = '" & UCase(Trim(cbCusCode.text)) & "'  " & _
+            "   AND a.cust_device =  '" & dT.Customer_Device & "'  AND a.flag = 0  AND  b.cust_id = a.cust_id   AND b.po_price = 'Y'  AND  b.openpo = 'N'   "
+
+
+
+If rsdevice1.State = adStateOpen Then rsdevice1.Close
+rsdevice1.Open strdevice, INIadoCon2, adOpenStatic, adLockReadOnly, adCmdText
+If Not rsdevice1.EOF Then
+
+If UCase(Trim(cbCusCode.text)) = "68" Or UCase(Trim(cbCusCode.text)) = "HK075" Then
+
+
+If price_w = Trim(rsdevice1.Fields(0).Value) And price_d = Trim(rsdevice1.Fields(1).Value) Then
+
+   If Trim(dT.po_no) <> Trim(txtPo_Price.text) Or Trim(dT.Customer_Device) <> Trim(txtcust_device.text) Then
+
+ pocheck = "select peaceqty, po_type from TSV_MD_POPrice where customershortname = '" & UCase(Trim(cbCusCode.text)) & "'  and PO_NUM= '" & Trim(dT.po_no) & "'  and PT = '" & dT.Customer_Device & "' "
+Set rs = Get_OracleRs(pocheck)
+If rs.RecordCount = 0 Then
+   
+   
+ PO_ID = GetPOPriceID()
+
+
+
+ postr = " insert into TSV_MD_POPrice (ID, CUSTOMERSHORTNAME,CUSTOMERNAME,PO_NUM,PO_DATE,PO_TYPE,PT,QTY,PRICE,UNIT, " & _
+         "  Flag, QTECH_CREATED_BY,QTECH_CREATED_DATE,PeaceQty,CUSTAA, DIE_PRICE) values('" & PO_ID & "','" & UCase(Trim(cbCusCode.text)) & "', " & _
+         "  '" & cust_name & "','" & Trim(dT.po_no) & "',sysdate,'正常订单', '" & dT.Customer_Device & "', 99999,'" & price_w & "',  " & _
+         "  '" & price_unit & "','Y', '', sysdate,999999,'NA','" & price_d & "' )   "
+
+ AddSql (postr)
+ 
+ 
+ postr1 = " insert into erptemp .. tblBB_CSRPO values (  '" & UCase(Trim(cbCusCode.text)) & "' ,'" & Trim(dT.po_no) & "',10,'',  '" & dT.Customer_Device & "'  " & _
+          " , 99999, 99999 ,'" & price_w & "','" & price_d & "','" & price_unit & "' ,'',CONVERT(varchar(100), getdate(), 20) , '') "
+ 
+AddSql2 (postr1)
+   
+ElseIf rs.Fields(1).Value = "NRE订单" Then
+   
+    If Trim(txtPo_Price.text) = "" Then
+    
+    txtPo_Price.text = dT.po_no
+    txtPOQTY.text = 1
+    
+    
+    ElseIf Trim(txtPo_Price.text) <> dT.po_no Then
+    
+     txtPo_Price.text = dT.po_no
+     txtPOQTY.text = 1
+    Else
+ 
+     txtPOQTY.text = Val(txtPOQTY.text) + 1
+     
+    End If
+ 
+   If Val(rs.Fields(0).Value) < Val(txtPOQTY.text) Then
+    
+     MsgBox "WO数量超过 NERPO" & Trim(dT.po_no) & "机种" & dT.Customer_Device & "数量!"
+      GetWOData = False
+     Exit Function
+    
+   End If
+   
+   
+   
+End If
+
+
+  txtPo_Price.text = dT.po_no
+  txtcust_device.text = dT.Customer_Device
+    
+End If
+
+
+Else
+
+ MsgBox "WO上单价和产品价格不一致,请确认价格信息!"
+        GetWOData = False
+        Exit Function
+    
+End If
+
+Else
+    
+    
+pocheck = "select peaceqty, po_type from TSV_MD_POPrice where customershortname = '" & UCase(Trim(cbCusCode.text)) & "'  and PO_NUM= '" & Trim(dT.po_no) & "'  and PT = '" & dT.Customer_Device & "' "
+Set rs = Get_OracleRs(pocheck)
+If rs.RecordCount = 0 Then
+
+    MsgBox "PO" & Trim(dT.po_no) & "机种" & dT.Customer_Device & "未维护价格,不允许上传WO!"
+    GetWOData = False
+    
+   Unload FrmPOPriceSys_NEW
+   FrmPOPriceSys_NEW.Show 1
+    
+    Exit Function
+   
+   
+ElseIf rs.Fields(1).Value = "NRE订单" Then
+   
+    If Trim(txtPo_Price.text) = "" Then
+    
+    txtPo_Price.text = dT.po_no
+    txtPOQTY.text = 1
+    
+    
+    ElseIf Trim(txtPo_Price.text) <> dT.po_no Then
+    
+     txtPo_Price.text = dT.po_no
+     txtPOQTY.text = 1
+    Else
+ 
+     txtPOQTY.text = Val(txtPOQTY.text) + 1
+     
+    End If
+ 
+   If Val(rs.Fields(0).Value) < Val(txtPOQTY.text) Then
+    
+     MsgBox "WO数量超过 NERPO" & Trim(dT.po_no) & "机种" & dT.Customer_Device & "数量!"
+      GetWOData = False
+     Exit Function
+    
+   End If
+   
+   
+
+End If
+    
+    
+    
+    
+End If
+
+
+Else
+
+
+pocheck = "select peaceqty, po_type from TSV_MD_POPrice where customershortname = '" & UCase(Trim(cbCusCode.text)) & "'  and PO_NUM= '" & Trim(dT.po_no) & "'  and PT = '" & dT.Customer_Device & "' "
+Set rs = Get_OracleRs(pocheck)
+If rs.RecordCount = 0 Then
+   
+   
+   
+ PO_ID = GetPOPriceID()
+
+
+
+ postr = " insert into TSV_MD_POPrice (ID, CUSTOMERSHORTNAME,CUSTOMERNAME,PO_NUM,PO_DATE,PO_TYPE,PT,QTY,PRICE,UNIT, " & _
+         "  Flag, QTECH_CREATED_BY,QTECH_CREATED_DATE,PeaceQty,CUSTAA, DIE_PRICE) values('" & PO_ID & "','" & UCase(Trim(cbCusCode.text)) & "', " & _
+         "  '" & cust_name & "','" & Trim(dT.po_no) & "',sysdate,'正常订单', '" & dT.Customer_Device & "', 99999,'" & w_price & "',  " & _
+         "  '" & price_unit & "','Y', '', sysdate,999999,'NA','" & d_price & "' )   "
+
+ AddSql (postr)
+ 
+ 
+ postr1 = " insert into erptemp .. tblBB_CSRPO values (  '" & UCase(Trim(cbCusCode.text)) & "' ,'" & Trim(dT.po_no) & "',10,'',  '" & dT.Customer_Device & "'  " & _
+          " , 99999, 99999 ,'" & w_price & "','" & d_price & "','" & price_unit & "' ,'',CONVERT(varchar(100), getdate(), 20) , '') "
+ 
+AddSql2 (postr1)
+
+
+ElseIf rs.Fields(1).Value = "NRE订单" Then
+   
+    If Trim(txtPo_Price.text) = "" Then
+    
+    txtPo_Price.text = dT.po_no
+    txtPOQTY.text = 1
+    
+    
+    ElseIf Trim(txtPo_Price.text) <> dT.po_no Then
+    
+     txtPo_Price.text = dT.po_no
+     txtPOQTY.text = 1
+    Else
+ 
+     txtPOQTY.text = Val(txtPOQTY.text) + 1
+     
+    End If
+ 
+   If Val(rs.Fields(0).Value) < Val(txtPOQTY.text) Then
+    
+     MsgBox "WO数量超过 NERPO" & Trim(dT.po_no) & "机种" & dT.Customer_Device & "数量!"
+      GetWOData = False
+     Exit Function
+    
+   End If
+   
+   
+   
+   
+   
+
+End If
+End If
+End If
+End If
+
+
+End Function
